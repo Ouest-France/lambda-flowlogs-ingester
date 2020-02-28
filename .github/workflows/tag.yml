@@ -1,0 +1,40 @@
+name: Tag
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+      
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Go 1.14
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.14
+      id: go
+
+    - name: Get the version
+      id: get_version
+      run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v1
+
+    - name: Build
+      run: CGO_ENABLED=0 go build -ldflags="-s -w" -o main main.go
+
+    - name: Package
+      run: zip lambda-flowlogs-ingester.zip main
+      
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v1-release
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: lambda-flowlogs-ingester.zip
+        asset_name: lambda-flowlogs-ingester.zip
+        tag: ${{ github.ref }}
+        overwrite: true
